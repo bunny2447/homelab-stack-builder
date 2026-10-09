@@ -55,10 +55,11 @@ async function smokeBatch(ids) {
         if (!c) problems.push(`${svc.name} missing`);
         else if (c.State !== "running" || /Restarting/i.test(c.Status)) problems.push(`${svc.name} ${c.State} (${c.Status})`);
       }
+      // Check each service's first web page. For apps with a setup wizard (AdGuard) that's the wizard,
+      // since the main UI only exists after setup.
       for (const svc of app.services || []) {
-        for (const p of (svc.ports || []).filter((x) => /UI/i.test(x.label))) {
-          if (!problems.length && !(await httpAnswers(p.host, p.https))) problems.push(`no HTTP answer on ${p.host}`);
-        }
+        const p = (svc.ports || []).find((x) => /UI|wizard/i.test(x.label));
+        if (p && !problems.length && !(await httpAnswers(p.host, p.https))) problems.push(`no HTTP answer on ${p.host}`);
       }
       if (problems.length) {
         // Apps log to stdout or stderr, so collect both.

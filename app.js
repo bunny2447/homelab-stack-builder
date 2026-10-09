@@ -200,6 +200,7 @@ function renderPicker() {
     b.classList.toggle("on", on);
     b.setAttribute("aria-pressed", on);
   });
+  $("#levelHelp").textContent = LEVEL_HELP[state.level];
 
   $("#deployPicker").innerHTML = Object.entries(TARGETS).map(([id, t]) => {
     const on = state.settings.deploy === id;
@@ -213,11 +214,20 @@ function renderPicker() {
   renderResults();
 }
 
+// What the experience level changes, shown under the level buttons.
+const LEVEL_HELP = {
+  1: "We'll recommend the easiest app for each goal, list harder apps last in the catalog, flag anything that's a step up, and add plain-English notes to your files and setup guide.",
+  2: "We'll recommend beginner and intermediate apps, list advanced apps last in the catalog, and flag anything that's a step up.",
+  3: "We'll recommend the more advanced option where a goal has one (e.g. Traefik over Nginx Proxy Manager) and add hardening tips to your setup guide.",
+};
+
 // The recommended pick for a goal: the first app at or below the user's level,
 // falling back to the easiest one. Bundled goals recommend every app.
 function recommendedFor(goal) {
   if (goal.bundle) return goal.picks;
   const apps = goal.picks.map((id) => APP_BY_ID[id]);
+  // Experienced users get the most advanced option (first one wins a tie).
+  if (state.level === 3) return [apps.reduce((best, a) => (a.difficulty > best.difficulty ? a : best)).id];
   const fit = apps.find((a) => a.difficulty <= state.level)
     || apps.slice().sort((a, b) => a.difficulty - b.difficulty)[0];
   return [fit.id];
@@ -277,8 +287,11 @@ function appBadges(app) {
 
 function appTile(a, rank) {
   const on = isSelected(a.id);
+  // Dim apps above the user's level, except in the Top 10 (those are recommended regardless).
+  const above = a.difficulty > state.level && !rank;
   return `
-    <button class="app ${on ? "on" : ""}" data-toggle="${a.id}" aria-pressed="${on}">
+    <button class="app ${on ? "on" : ""} ${above ? "above" : ""}" data-toggle="${a.id}" aria-pressed="${on}"
+      ${above ? `title="A step up from your level. Worth it, but read the docs first."` : ""}>
       <div class="row"><span class="name">${rank ? `<span class="rank">${rank}</span>` : ""}${esc(a.name)}</span><span class="check" aria-hidden="true">${on ? "✓" : ""}</span></div>
       <p>${esc(a.desc)}</p>
       <div><span class="badge d${a.difficulty}">${DIFFICULTY[a.difficulty]}</span> ${appBadges(a)}</div>
@@ -320,7 +333,10 @@ function renderCatalog() {
       "Popular, well-supported apps most homelabs start with.", true));
   }
   for (const cat of CATEGORIES.slice(1)) {
-    const list = apps.filter((a) => a.category === cat).sort((a, b) => a.difficulty - b.difficulty || a.name.localeCompare(b.name));
+    // Apps that fit the user's level come first, then easiest first.
+    const fits = (a) => (a.difficulty > state.level ? 1 : 0);
+    const list = apps.filter((a) => a.category === cat)
+      .sort((a, b) => fits(a) - fits(b) || a.difficulty - b.difficulty || a.name.localeCompare(b.name));
     if (list.length) sections.push(catalogSection(cat, esc(cat), list));
   }
   $("#catalog").innerHTML = sections.join("");
@@ -498,6 +514,19 @@ function buildCompose() {
     "# Values like ${TZ} come from the .env file in the same folder.",
     "# Images track :latest (or a major version). Pin exact tags if you want fully repeatable installs.",
   ];
+  if (state.level === 1) {
+    lines.push(
+      "#",
+      "# How to read this file:",
+      "#   Each block under services: is one app (a container).",
+      "#   ports: \"8096:8096\" means server port 8096 (left) goes to the app's port 8096 (right).",
+      "#            Open the app at http://<your-server-ip>:<left number>.",
+      "#   volumes: \"folder on your server:folder inside the app\". Your data lives in the left folder,",
+      "#            so it survives updates and restarts.",
+      "#   environment: settings passed to the app.",
+      "#   restart: unless-stopped brings the app back after a reboot.",
+    );
+  }
   if (native.length) {
     lines.push("#", `# In their own Proxmox LXC instead (see SETUP.md): ${native.map((a) => a.name).join(", ")}`);
   }
@@ -689,6 +718,29 @@ function downloadOutput() {
   toast(`Downloaded ${file}`);
 }
 
+// ---------------------------------------------------------------- light/dark toggle
+
+// No saved choice means "follow the system"; using the toggle saves an explicit light or dark.
+function currentTheme() {
+  return document.documentElement.dataset.theme
+    || (window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark");
+}
+
+function renderThemeToggle() {
+  const dark = currentTheme() === "dark";
+  $("#themeToggle").setAttribute("aria-checked", dark);
+  $("#themeLabel").textContent = dark ? "Dark" : "Light";
+  $("#themeIcon").textContent = dark ? "🌙" : "☀️";
+  $('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0f1419" : "#f5f7fa");
+}
+
+function toggleTheme() {
+  const next = currentTheme() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("homelab-theme", next); } catch { /* storage unavailable: still applies for this visit */ }
+  renderThemeToggle();
+}
+
 // ---------------------------------------------------------------- events
 
 document.addEventListener("click", (ev) => {
@@ -737,6 +789,7 @@ document.addEventListener("click", (ev) => {
       openGoalGroups = openGoalGroups.size === groups.size ? new Set() : groups;
       return renderPicker();
     }
+    case "themeToggle": return toggleTheme();
     case "autoFixBtn": return autoFixPorts();
     case "copyBtn": return copyOutput();
     case "downloadBtn": return downloadOutput();
@@ -795,6 +848,8 @@ document.addEventListener("input", (ev) => {
 // ---------------------------------------------------------------- init
 
 applyShareLink();
+renderThemeToggle();
+window.matchMedia?.("(prefers-color-scheme: light)").addEventListener?.("change", renderThemeToggle);
 $("#gettingStarted").open = state.level === 1;
 renderPicker();
 updateCount();

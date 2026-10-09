@@ -115,6 +115,19 @@ async function main() {
   if (args.has("--compose")) check(!composeValid(writeStack("pve-native")), "LXC-per-app leftover compose passes docker compose config");
   site.setTarget("docker");
 
+  // ---- Experience level
+  const httpsGoal = GOALS.find((g) => g.id === "https");
+  state.level = 1;
+  check(site.recommendedFor(httpsGoal)[0] === "npm", "level 1 recommends Nginx Proxy Manager for HTTPS");
+  selectApps(site, ["jellyfin"]);
+  check(site.buildCompose().includes("# How to read this file:") && site.buildSetup().includes("# Everyday commands"),
+    "level 1 adds plain-English notes to compose and setup guide");
+  state.level = 3;
+  check(site.recommendedFor(httpsGoal)[0] === "traefik", "level 3 recommends Traefik for HTTPS");
+  check(!site.buildCompose().includes("# How to read this file:") && site.buildSetup().includes("# Hardening tips"),
+    "level 3 adds hardening tips instead");
+  state.level = 1;
+
   // ---- Network checks
   if (!args.has("--offline")) {
     const headers = { "User-Agent": "homelab-stack-builder-tests" };

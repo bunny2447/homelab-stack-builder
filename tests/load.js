@@ -26,7 +26,10 @@ function loadSite() {
     location: { hash: "", href: "file:///index.html" },
     history: { replaceState() {} },
     window: { scrollTo() {} },
-    document: { querySelector: (s) => (els[s] ||= fakeEl()), querySelectorAll: () => [], addEventListener() {} },
+    document: {
+      documentElement: { dataset: {} },
+      querySelector: (s) => (els[s] ||= fakeEl()), querySelectorAll: () => [], addEventListener() {},
+    },
   };
   vm.createContext(ctx);
   const src = SCRIPTS.map((f) => fs.readFileSync(path.join(ROOT, f), "utf8")).join("\n;\n");

@@ -12,6 +12,10 @@
   <meta name="theme-color" content="#0f1419">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpolygon points='50,4 90,27 90,73 50,96 10,73 10,27' fill='%232ea8ff'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // Apply the saved light/dark choice before the page paints, so it doesn't flash.
+    try { const t = localStorage.getItem("homelab-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
 </head>
 <body>
   <header class="topbar">
@@ -22,10 +26,16 @@
         <p>Find what to self-host, then generate a ready-to-run Docker Compose file.</p>
       </div>
     </div>
-    <nav class="tabs" role="tablist">
-      <button class="tab" data-view="picker" role="tab">1. Find apps</button>
-      <button class="tab" data-view="builder" role="tab">2. Build stack <span id="stackCount" class="count">0</span></button>
-    </nav>
+    <div class="top-actions">
+      <nav class="tabs" role="tablist">
+        <button class="tab" data-view="picker" role="tab">1. Find apps</button>
+        <button class="tab" data-view="builder" role="tab">2. Build stack <span id="stackCount" class="count">0</span></button>
+      </nav>
+      <button id="themeToggle" class="theme-toggle" role="switch" aria-checked="false" aria-label="Dark mode">
+        <span id="themeLabel">Light</span>
+        <span class="track" aria-hidden="true"><span class="thumb" id="themeIcon">☀️</span></span>
+      </button>
+    </div>
   </header>
 
   <!-- ============ VIEW 1: PICKER ============ -->
@@ -64,6 +74,7 @@ sudo usermod -aG docker $USER   # then log out and back in</code></pre></li>
         <button data-level="2">🔧 I've run a few containers</button>
         <button data-level="3">🚀 Bring on the complexity</button>
       </div>
+      <p id="levelHelp" class="muted small level-help"></p>
     </section>
 
     <section class="card">

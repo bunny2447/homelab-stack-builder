@@ -321,6 +321,31 @@ function buildSetup() {
     }
   }
 
+  if (state.level === 1 && dockerApps.length) {
+    L.push("", "---", "", "# Everyday commands",
+      "Run these in the folder that holds docker-compose.yml.", "");
+    cmd("docker compose ps                 # what's running, and is anything restarting?",
+      "docker compose logs -f jellyfin   # watch one app's log (Ctrl+C to stop watching)",
+      "docker compose restart jellyfin   # restart one app",
+      "docker compose down               # stop everything (your data stays safe)",
+      "docker compose up -d              # start everything again",
+      "docker compose pull && docker compose up -d   # update all apps");
+    L.push("", `Your app settings live in ${s.configRoot} and your media in ${s.dataRoot}.`,
+      "Those folders are what you back up. Containers themselves can be deleted and recreated at any time.",
+      "If an app won't open, check its log first: the answer is usually in the last few lines.");
+  }
+
+  if (state.level === 3) {
+    L.push("", "---", "", "# Hardening tips",
+      "- Pin image tags (or digests) instead of :latest, and update deliberately with a tool like Renovate or What's up Docker.",
+      "- Put web UIs behind a reverse proxy with HTTPS and SSO (Authelia/authentik) instead of exposing ports directly.",
+      "- Apps that mount /var/run/docker.sock effectively have root on the host. Use a socket proxy (e.g. tecnativa/docker-socket-proxy) with read-only access where possible.",
+      "- Firewall the host (e.g. ufw) so only the reverse proxy and needed ports are reachable from your LAN.",
+      `- Back up ${s.configRoot} off-site (restic, Borg or Duplicati), and test a restore.`,
+      "- Keep .env out of git and other shared places. It holds every generated password.",
+      "- Add resource limits (mem_limit, cpus) to heavy apps so one runaway container can't starve the rest.");
+  }
+
   if (external.length) {
     L.push("", "---", "", "# Set up separately",
       "These apps use their own official compose files (run them next to this stack):");
