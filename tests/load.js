@@ -10,7 +10,7 @@ const SCRIPTS = ["apps.js", "apps-more.js", "goals.js", "deploy.js", "app.js"];
 const EXPORTS = [
   "addApp", "removeApp", "buildCompose", "buildEnv", "buildSetup", "findConflicts", "reservedClashes",
   "autoFixPorts", "setTarget", "recommendedFor", "renderPicker", "renderBuilder", "nativeMode", "ociBlocker",
-  "fullImageRef", "ociCommands", "APPS", "GOALS", "TOP_PICKS", "APP_BY_ID", "TARGETS",
+  "fullImageRef", "ociCommands", "allPorts", "hostPort", "APPS", "GOALS", "TOP_PICKS", "APP_BY_ID", "TARGETS",
 ];
 
 function loadSite() {

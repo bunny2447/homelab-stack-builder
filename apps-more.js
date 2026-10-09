@@ -424,7 +424,11 @@ APPS.push(
     lxcAlt: "Only useful if you run Docker.",
     desc: "Shows which of your containers have newer images available.",
     docs: "https://getwud.github.io/wud/",
+    secrets: ["WUD_ADMIN_PASSWORD"],
+    note: "Log in as admin with WUD_ADMIN_PASSWORD from .env.",
     image: "getwud/wud:latest", port: [3005, 3000],
+    // Digest watching is needed to see updates for :latest images, which this stack mostly uses.
+    env: { WUD_AUTH_ADMIN_USER: "admin", WUD_AUTH_ADMIN_PASSWORD: "${WUD_ADMIN_PASSWORD}", WUD_WATCHER_LOCAL_WATCHDIGEST: "true" },
     volumes: ["/var/run/docker.sock:/var/run/docker.sock:ro"],
   },
   {
