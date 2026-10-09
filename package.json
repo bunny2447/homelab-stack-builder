@@ -1,0 +1,10 @@
+{
+  "name": "homelab-stack-builder",
+  "private": true,
+  "description": "Find what to self-host and generate a ready-to-run docker-compose.yml",
+  "scripts": {
+    "test": "node tests/run.js --compose",
+    "test:full": "node tests/run.js --compose --images",
+    "smoke": "node tests/smoke.js"
+  }
+}

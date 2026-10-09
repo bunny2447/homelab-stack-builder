@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Homelab Stack Builder</title>
+  <meta name="description" content="Find what to self-host (140+ apps: Jellyfin, Immich, Pi-hole, Vaultwarden, the *arr stack and more) and generate a ready-to-run docker-compose.yml with no port conflicts. Works with Proxmox (VM, LXC or helper scripts), Synology, Unraid and plain Linux. Free, runs in your browser.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Homelab Stack Builder">
+  <meta property="og:description" content="Pick what you want to self-host, get a ready-to-run docker-compose.yml. Beginner friendly, no sign-up.">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" content="#0f1419">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpolygon points='50,4 90,27 90,73 50,96 10,73 10,27' fill='%232ea8ff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">⬢</span>
+      <div>
+        <h1>Homelab Stack Builder</h1>
+        <p>Find what to self-host, then generate a ready-to-run Docker Compose file.</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab" data-view="picker" role="tab">1. Find apps</button>
+      <button class="tab" data-view="builder" role="tab">2. Build stack <span id="stackCount" class="count">0</span></button>
+    </nav>
+  </header>
+
+  <!-- ============ VIEW 1: PICKER ============ -->
+  <main id="view-picker" class="view">
+    <details id="gettingStarted" class="card guide">
+      <summary><h2>New to this? Start here</h2></summary>
+      <ol>
+        <li><strong>Get a server.</strong> Any always-on Linux machine works: an old laptop, a mini PC or a
+          Raspberry Pi 4/5. Ubuntu Server or Debian are easy choices.</li>
+        <li><strong>Install Docker</strong> on it:
+          <pre><code>curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER   # then log out and back in</code></pre></li>
+        <li><strong>Note two things</strong> you'll need later: your user and group IDs (run <code>id</code>,
+          usually 1000) and the server's IP address (run <code>hostname -I</code>).</li>
+        <li><strong>Pick apps below</strong>, build your stack, download both files into one folder
+          on the server, and run <code>docker compose up -d</code> in that folder.</li>
+        <li><strong>Open your apps</strong> using the links shown under "Open your apps" in the builder.</li>
+      </ol>
+      <p class="muted small">Don't open these apps to the internet with port forwarding. To reach them away from home,
+        use Tailscale or WireGuard (both in the catalog).</p>
+    </details>
+
+    <section class="card">
+      <div class="results-head">
+        <h2>What do you want to do?</h2>
+        <button id="toggleGoalsBtn" class="btn ghost small">Expand all</button>
+      </div>
+      <p class="muted">Open a category and pick as many as you like.</p>
+      <div id="goalGroups"></div>
+    </section>
+
+    <section class="card">
+      <h2>How comfortable are you with Docker?</h2>
+      <div class="segmented" id="levelPicker">
+        <button data-level="1">🌱 Just starting</button>
+        <button data-level="2">🔧 I've run a few containers</button>
+        <button data-level="3">🚀 Bring on the complexity</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Where will you run it?</h2>
+      <p class="muted">Changes the setup guide, default folders, and on Proxmox whether apps run in Docker or their own LXC.</p>
+      <div id="deployPicker" class="deploy-grid"></div>
+    </section>
+
+    <section id="results" class="card" hidden>
+      <div class="results-head">
+        <h2>Suggestions for you</h2>
+        <button id="addAllBtn" class="btn primary">Add all recommended to my stack →</button>
+      </div>
+      <div id="resultList"></div>
+    </section>
+  </main>
+
+  <!-- ============ VIEW 2: BUILDER ============ -->
+  <main id="view-builder" class="view builder" hidden>
+    <div class="col-left">
+      <section class="card">
+        <h2>Settings</h2>
+        <div class="settings-grid">
+          <label class="wide">Deploy to <select id="deploySelect" data-setting="deploy"></select></label>
+          <label>Timezone <input data-setting="tz" placeholder="Europe/London"></label>
+          <label>PUID <input data-setting="puid" inputmode="numeric"></label>
+          <label>PGID <input data-setting="pgid" inputmode="numeric"></label>
+          <label>Restart policy
+            <select data-setting="restart">
+              <option>unless-stopped</option><option>always</option><option>on-failure</option><option>no</option>
+            </select>
+          </label>
+          <label class="wide">App config folder <input data-setting="configRoot"></label>
+          <label class="wide">Data folder (media + downloads) <input data-setting="dataRoot"></label>
+          <label class="half">Server IP (for links) <input data-setting="host" placeholder="192.168.1.10"></label>
+          <label class="half check-label"><input type="checkbox" data-setting="gpu"> Intel/AMD GPU for transcoding</label>
+        </div>
+        <p class="muted small">Run <code>id</code> on your server to find your PUID/PGID.
+          Media goes in <code>data/media</code> (movies, tv, music, books) and downloads in <code>data/torrents</code>.
+          Keeping both in one folder lets Sonarr and Radarr move files instantly instead of copying them.</p>
+      </section>
+
+      <section class="card">
+        <div class="catalog-head">
+          <h2>App catalog <span id="catalogCount" class="muted"></span></h2>
+          <input id="search" type="search" placeholder="Search apps…" aria-label="Search apps">
+        </div>
+        <div id="catFilter" class="chips"></div>
+        <div id="catalog"></div>
+      </section>
+    </div>
+
+    <div class="col-right">
+      <section class="card">
+        <div class="results-head">
+          <h2>Your stack</h2>
+          <span>
+            <button id="shareBtn" class="btn small">🔗 Share link</button>
+            <button id="clearBtn" class="btn ghost small">Clear all</button>
+          </span>
+        </div>
+        <div id="warnings"></div>
+        <div id="selectedList"></div>
+      </section>
+
+      <section class="card output">
+        <div class="out-tabs" role="tablist">
+          <button class="out-tab" data-out="compose" role="tab">docker-compose.yml</button>
+          <button class="out-tab" data-out="env" role="tab">.env</button>
+          <button class="out-tab" data-out="setup" role="tab">Setup guide</button>
+          <div class="spacer"></div>
+          <button id="copyBtn" class="btn small">Copy</button>
+          <button id="downloadBtn" class="btn small primary">Download</button>
+        </div>
+        <pre id="output"><code></code></pre>
+        <p class="muted small">Put both files in the same folder on your server, then run
+          <code>docker compose up -d</code>. The Setup guide tab has step-by-step instructions for where you're deploying.</p>
+      </section>
+
+      <section class="card">
+        <h2>Open your apps</h2>
+        <p class="muted small">Once the stack is running, your apps are here. Set your server IP in Settings to make these links work.</p>
+        <div id="links"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    Generated files and linked helper scripts come with no warranty. Read a script before you run it,
+    and keep your <code>.env</code> private. Everything runs in your browser; nothing you pick is sent anywhere.
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="apps.js"></script>
+  <script src="apps-more.js"></script>
+  <script src="goals.js"></script>
+  <script src="deploy.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
